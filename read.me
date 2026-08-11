@@ -1,1 +1,121 @@
+# AME Bazaar — Autonomous Fashion Blog & Content Marketing Agent
 
+## Purpose
+This repository is the dedicated home for the AME Bazaar Fashion Content Marketing Agent. The implementation was originally developed inside `Yashu-maheshwari/ame-bazaar-ai-os` and is being separated here so the agent can be recovered, understood, tested, and extended without depending on chat history.
+
+## Business Context
+- Brand: AME Bazaar
+- Business: family garments retail
+- Primary market: Kirari, Delhi
+- Website: https://amebazaar.in
+- Goal: useful fashion/local-shopping content that improves SEO, AI discoverability, customer trust, store visits and product conversions.
+
+## Production Engine
+Main file: `scripts/fashion_content_agent.js`
+
+Pipeline:
+1. Load `config/local.env`.
+2. Load centralized facts from `config/business_config.json`.
+3. Read topic queue and duplicate-protection memory.
+4. Generate new topics with Gemini when the queue is empty.
+5. Generate article + campaign assets with Gemini.
+6. Add AME Bazaar CTA and relevant WooCommerce products.
+7. Run SEO Quality Gate.
+8. Run production data-integrity checks.
+9. Generate featured image using OpenAI when configured, otherwise Unsplash fallback.
+10. Upload image to WordPress.
+11. Add Article + FAQ JSON-LD.
+12. Save campaign assets under `projects/content-marketing/<slug>/`.
+13. Create a WordPress draft through REST API.
+14. Attempt Google Business Profile local-post publishing.
+15. Update daily execution history and published-topic memory.
+
+## CLI
+```text
+node scripts/fashion_content_agent.js
+node scripts/fashion_content_agent.js --dry-run
+node scripts/fashion_content_agent.js --verbose
+node scripts/fashion_content_agent.js --force-topic "Topic title"
+```
+
+## Required Project Areas
+- `scripts/fashion_content_agent.js` — production engine
+- `scripts/verify_agent.js` — verification suite
+- `scripts/gmb_auth.js` — GBP OAuth/account/location setup
+- `scripts/test_gbp_publish.js` — GBP publish test
+- `scripts/run-qa.js` — QA automation
+- `prompts/seo/content_agent_system_prompt.txt` — content-generation contract
+- `prompts/seo/topic_generator_prompt.txt` — topic-generation contract
+- `config/business_config.json` — centralized business facts
+- `config/local.env` — local secrets; never commit real credentials
+- `config/local.env.example` — safe template
+- `memory/published_topics.json` — topic queue + published registry
+- `memory/daily_execution_history.json` — daily duplicate guard
+- `projects/content-marketing/` — generated campaign assets
+- `logs/` — execution logs
+- `startup/` — Windows launch helpers
+
+## Environment
+Expected variables include:
+`WORDPRESS_URL`, `WORDPRESS_USERNAME`, `WORDPRESS_APPLICATION_PASSWORD`, `GEMINI_API_KEY`, optional `GEMINI_MODEL`, optional `OPENAI_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_GBP_ACCESS_TOKEN`, `GOOGLE_GBP_REFRESH_TOKEN`, `GOOGLE_GBP_ACCOUNT_ID`, `GOOGLE_GBP_LOCATION_ID`, and optional `MOCK_GEMINI`.
+
+**Secrets stay local. Never commit API keys, OAuth secrets, refresh tokens or WordPress application passwords.**
+
+## WordPress Integration
+Used endpoints include:
+- `/wp-json/wp/v2/posts` — create blog drafts
+- `/wp-json/wp/v2/media` — upload featured images
+- `/wp-json/wp/v2/product_cat` — find relevant categories
+- `/wp-json/wc/v3/products` — retrieve related products
+
+Authentication is WordPress username + application password.
+
+## Google Business Profile Integration
+`gmb_auth.js` performs OAuth, then retrieves Business Profile account and location IDs. The production publisher uses the local-post endpoint under `mybusiness.googleapis.com`.
+
+Historical implementation status: OAuth/token acquisition worked, but account/location discovery was blocked by Google Cloud quota. Therefore GBP must always be independently re-verified; OAuth success alone does not prove publishing is working.
+
+## SEO / GEO
+The permanent rules are documented in `docs/BLOG_PLAYBOOK.md` in the original AI OS repository. Core principles: answer real questions, be factual/useful, use clear headings, add FAQs when useful, link relevant products/internal pages, use a natural CTA, avoid fake claims/hype, and keep business facts consistent. The production SEO gate checks keyword density, title keyword presence, H2 headings and article length; score below 90 blocks the publishing path.
+
+## Duplicate Protection
+- `memory/daily_execution_history.json` prevents repeated normal campaign generation on the same day.
+- `memory/published_topics.json` maintains the queue and published-topic registry.
+- Forced-topic execution intentionally bypasses the normal daily guard.
+
+## Windows Automation
+Task name: `AME_Bazaar_Content_Engine`.
+A corrected recovery used a daily 09:00 schedule with highest privileges and `C:\Progra~1\nodejs\node.exe`. Historical failure was caused by `schtasks` quoting/admin-permission issues.
+
+## Verification / Debug Order
+1. Read `logs/fashion_content_agent.log`.
+2. Run `node scripts/verify_agent.js`.
+3. Run `node scripts/fashion_content_agent.js --dry-run --verbose`.
+4. Check environment-variable presence without exposing values.
+5. Check daily history and topic memory.
+6. Test WordPress credentials.
+7. Test GBP with `node scripts/test_gbp_publish.js`.
+8. Only then investigate Windows Task Scheduler.
+
+## AI Onboarding
+A future AI must first read this file, then the project context/status docs, blog playbook, actual scripts, environment template, and verification documentation. Inspect current code before changing anything. Never rely only on memory.
+
+## Change Rules
+- Preserve working behavior unless the requested change requires it.
+- Keep secrets out of Git.
+- Prefer small, testable changes.
+- Do not silently change business facts.
+- Update documentation whenever architecture, integrations, schedules, commands, or recovery procedures change.
+- Verify meaningful changes before declaring success.
+
+## Source / Migration
+Original implementation: `Yashu-maheshwari/ame-bazaar-ai-os`.
+This repository is the dedicated mirror/project home. When syncing future changes, compare versions first and never blindly overwrite newer target work.
+
+## Known Historical Issues
+- Windows Task Scheduler initially failed due to admin/path-quoting issues; a corrected task was later created.
+- GBP OAuth worked but account/location discovery was previously blocked by Google Cloud quota.
+- Earlier verification showed local topic selection, duplicate protection, SEO/GEO and generation logic working; live WordPress verification could fail when application credentials were unavailable.
+
+## Bottom Line
+Treat **code + prompts + configuration templates + memory + generated artifacts + verification + documentation** as one system. Future AI agents should update the relevant pieces together so the project remains recoverable and understandable.
