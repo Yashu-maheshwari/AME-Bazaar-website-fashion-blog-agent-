@@ -1,0 +1,53 @@
+name: Import Fashion Agent Source
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout original private source repository
+        uses: actions/checkout@v4
+        with:
+          repository: Yashu-maheshwari/ame-bazaar-ai-os
+          ref: main
+          token: ${{ secrets.SOURCE_REPO_PAT }}
+          path: _source_ai_os
+          fetch-depth: 1
+
+      - name: Mirror source files into target
+        shell: bash
+        run: |
+          set -e
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='config/local.env' \
+            --exclude='logs/*.log' \
+            _source_ai_os/ ./
+          rm -rf _source_ai_os
+
+      - name: Restore target migration documentation
+        shell: bash
+        run: |
+          git checkout -- read.me PROJECT_CONTEXT.md MIGRATION_MANIFEST.md 2>/dev/null || true
+
+      - name: Commit mirror
+        run: |
+          git config user.name "AME Bazaar Source Mirror"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No source changes to import."
+            exit 0
+          fi
+          git commit -m "chore: mirror fashion agent source from ame-bazaar-ai-os"
+          git push origin main
