@@ -1,0 +1,21 @@
+{
+  "activeAgents": [
+    {
+      "name": "OS Lead Developer Agent",
+      "role": "Architect & Developer",
+      "status": "Active"
+    },
+    {
+      "name": "Local SEO Marketing Engine",
+      "role": "SEO/GEO Content & Google Business Publisher",
+      "status": "Active"
+    }
+  ],
+  "registeredAgents": [
+    {
+      "name": "Local SEO Optimizer",
+      "role": "SEO & Schema Automation",
+      "status": "Planning"
+    }
+  ]
+}

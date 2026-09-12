@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "executionTimeSeconds": 27.69,
+  "publishedUrl": "https://amebazaar.in/?p=3689",
+  "seoScore": 100,
+  "wordCount": 646,
+  "slug": "test-topic-1784732279400-casual-wear-guide",
+  "usage": {
+    "promptTokenCount": 985,
+    "candidatesTokenCount": 2294,
+    "totalTokenCount": 6593,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 985
+      }
+    ],
+    "thoughtsTokenCount": 3314,
+    "serviceTier": "standard"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "executionTimeSeconds": 23.1,
+  "publishedUrl": "DRY_RUN",
+  "seoScore": 90,
+  "wordCount": 706,
+  "slug": "top-5-quick-dry-monsoon-kids-wear-kirari",
+  "usage": {
+    "promptTokenCount": 992,
+    "candidatesTokenCount": 2798,
+    "totalTokenCount": 4665,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 992
+      }
+    ],
+    "thoughtsTokenCount": 875,
+    "serviceTier": "standard"
+  }
+}

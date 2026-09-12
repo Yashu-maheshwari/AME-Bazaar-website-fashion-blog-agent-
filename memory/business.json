@@ -1,0 +1,18 @@
+{
+  "businessName": "AME Bazaar",
+  "legalEntity": "Apparel Maheshwari Enterprises",
+  "businessType": "Offline Family Garment Retail Store",
+  "location": {
+    "address": "Mubarakpur Road, Kirari, Delhi, India",
+    "city": "Delhi",
+    "country": "India"
+  },
+  "operatingHours": {
+    "monday_sunday": "10:00 AM - 09:30 PM"
+  },
+  "contact": {
+    "phone": "+91-XXXXXXXXXX",
+    "email": "info@amebazaar.com",
+    "whatsapp": "+91-XXXXXXXXXX"
+  }
+}

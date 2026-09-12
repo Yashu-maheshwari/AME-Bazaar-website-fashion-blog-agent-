@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "executionTimeSeconds": 25.83,
+  "publishedUrl": "https://amebazaar.in/?p=3687",
+  "seoScore": 100,
+  "wordCount": 865,
+  "slug": "fitted-mens-shirt-delhi-tailoring-vs-readymade",
+  "usage": {
+    "promptTokenCount": 990,
+    "candidatesTokenCount": 2912,
+    "totalTokenCount": 5545,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 990
+      }
+    ],
+    "thoughtsTokenCount": 1643,
+    "serviceTier": "standard"
+  }
+}

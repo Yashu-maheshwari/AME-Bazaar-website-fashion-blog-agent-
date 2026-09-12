@@ -1,0 +1,15 @@
+# Environment secrets files
+*.env
+*.env.local
+config/*.env
+config/local.env
+config/runtime.env
+
+# Allow tracking example environment templates
+!*.example.env
+!config/local.example.env
+
+# Logs and directories
+logs/
+node_modules/
+.DS_Store

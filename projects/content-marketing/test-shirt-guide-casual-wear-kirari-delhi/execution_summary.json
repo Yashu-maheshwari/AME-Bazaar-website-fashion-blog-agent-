@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "executionTimeSeconds": 30.42,
+  "publishedUrl": "https://amebazaar.in/?p=3693",
+  "seoScore": 100,
+  "wordCount": 762,
+  "slug": "test-shirt-guide-casual-wear-kirari-delhi",
+  "usage": {
+    "promptTokenCount": 957,
+    "candidatesTokenCount": 2565,
+    "totalTokenCount": 5172,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 957
+      }
+    ],
+    "thoughtsTokenCount": 1650,
+    "serviceTier": "standard"
+  }
+}

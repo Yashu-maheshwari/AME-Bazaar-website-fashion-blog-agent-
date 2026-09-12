@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "executionTimeSeconds": 1.77,
+  "publishedUrl": "https://amebazaar.in/?p=3703",
+  "gbpPostId": "mock-gbp-12345",
+  "seoScore": 90,
+  "wordCount": 2062,
+  "slug": "monsoon-kids-wear-kirari",
+  "usage": {
+    "promptTokens": 100,
+    "candidatesTokens": 200
+  }
+}

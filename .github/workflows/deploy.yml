@@ -1,0 +1,123 @@
+name: Deploy Image Service to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Image Service
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "Setting up SSH directory..."
+          mkdir -p ~/.ssh
+
+          # Write SSH key using printf (secret corrected run)
+          printf "%b\n" "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          echo "SSH setup completed."
+
+      - name: Verify API Directory and Deploy Image Service
+        run: |
+          echo "Creating remote api directory if missing..."
+          ssh -p ${{ vars.PORT }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${{ secrets.USERNAME }}@${{ secrets.HOST }} \
+            "mkdir -p domains/amebazaar.in/public_html/api/"
+
+          echo "Starting rsync transfer for image service..."
+          rsync --archive --compress --verbose \
+            -e "ssh -p ${{ vars.PORT }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+            api/image-service.php \
+            ${{ secrets.USERNAME }}@${{ secrets.HOST }}:domains/amebazaar.in/public_html/api/image-service.php
+          echo "Image Service Deployment successful!"
+
+      - name: Provision Server-Side Secret Config
+        env:
+          IMAGE_SECRET: ${{ secrets.AME_IMAGE_SERVICE_SECRET }}
+        run: |
+          if [ -n "$IMAGE_SECRET" ]; then
+            echo "Provisioning image-service-config.php outside public_html..."
+
+            # Safe cleanup guaranteed even if rsync fails
+            trap 'rm -f ${RUNNER_TEMP}/image-service-config.php' EXIT
+
+            # Use heredoc to avoid exposing secret in command args
+            cat <<EOF > ${RUNNER_TEMP}/image-service-config.php
+          <?php
+          define('AME_IMAGE_SERVICE_SECRET', '${IMAGE_SECRET}');
+          EOF
+
+            rsync --archive --compress \
+              -e "ssh -p ${{ vars.PORT }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
+              ${RUNNER_TEMP}/image-service-config.php \
+              ${{ secrets.USERNAME }}@${{ secrets.HOST }}:domains/amebazaar.in/image-service-config.php
+
+            echo "Config provisioning successful!"
+          else
+            echo "AME_IMAGE_SERVICE_SECRET is not set. Skipping config provisioning."
+          fi
+
+      - name: Verify Deployed Files on Hostinger
+        run: |
+          echo "Verifying api/image-service.php on Hostinger..."
+          ssh -p ${{ vars.PORT }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${{ secrets.USERNAME }}@${{ secrets.HOST }} "test -f domains/amebazaar.in/public_html/api/image-service.php && echo 'image-service.php: PRESENT' || echo 'image-service.php: MISSING'"
+
+          echo "Verifying image-service-config.php outside public_html..."
+          ssh -p ${{ vars.PORT }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            ${{ secrets.USERNAME }}@${{ secrets.HOST }} "test -f domains/amebazaar.in/image-service-config.php && echo 'image-service-config.php: PRESENT' || echo 'image-service-config.php: MISSING'"
+
+          echo "Verification complete."
+
+  qa-audit:
+    name: Run Automated QA Checks
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: |
+          npm init -y
+          npm install playwright axios
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright & Lighthouse QA checks
+        run: node scripts/run-qa.js
+
+      - name: Upload QA Screenshots Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-screenshots
+          path: qa/screenshots/
+
+      - name: Upload Lighthouse Reports Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-lighthouse
+          path: qa/lighthouse/
+
+      - name: Upload QA Final HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-report
+          path: qa/report.html
