@@ -44,7 +44,7 @@ function testGeminiConnection() {
 function testEndToEndDraftGeneration() {
   Logger.log('=== [TEST] Starting Safe End-to-End Draft Generation Pipeline ===');
   const testTitle = `AME Bazaar Fashion Test Draft ${Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyyMMdd-HHmm")}`;
-  
+
   // 1. Generate full article as DRAFT only (statusOverride: 'draft')
   const result = runDailyContentEngine({
     isDryRun: false,
@@ -100,9 +100,9 @@ function testEndToEndDraftGeneration() {
 function testAiContentEngine() {
   Logger.log('=== [TEST] Starting AI-Visibility Content Engine Dry Run ===');
   Logger.log('[TEST] START');
-  
+
   const testTitle = `AME Bazaar AEO Test ${Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyyMMdd-HHmm")}`;
-  
+
   try {
     const result = runDailyContentEngine({
       isDryRun: true, // DO NOT PUBLISH
@@ -176,7 +176,7 @@ function inspectProjectTriggers() {
  */
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'status';
-  
+
   if (action === 'getTriggers') {
     const triggers = inspectProjectTriggers();
     return ContentService.createTextOutput(JSON.stringify({
@@ -253,8 +253,8 @@ function runDailyContentEngineLegacySync(options) {
     return { success: true, message: `Already executed for ${todayStr}`, skipped: true };
   }
 
-  const MAX_TOPIC_ATTEMPTS = 3; 
-  
+  const MAX_TOPIC_ATTEMPTS = 3;
+
   for (let topicAttempt = 1; topicAttempt <= MAX_TOPIC_ATTEMPTS; topicAttempt++) {
     if (topicAttempt > 1 && typeof hasExecutionBudget === 'function' && !hasExecutionBudget(60000)) {
       const elapsed = typeof getScriptElapsedMs === 'function' ? (getScriptElapsedMs() / 1000).toFixed(1) : '?';
@@ -280,7 +280,7 @@ function runDailyContentEngineLegacySync(options) {
           const systemPrompt = buildContentPrompt(topic);
           Logger.log('[GEMINI] Requesting content generation from Gemini API...');
           const generated = callGemini(systemPrompt, 3, isDryRun);
-          
+
           articleData = cleanAndParseJson(generated.text);
           if (!articleData.primaryCategory && topic.category) {
             articleData.primaryCategory = topic.category;
@@ -317,12 +317,12 @@ function runDailyContentEngineLegacySync(options) {
 
           Logger.log(`[REPAIR] Attempt ${repairAttempt}/${MAX_REPAIR_ATTEMPTS}`);
           Logger.log(`[REPAIR] Input issues: ${seoReport ? seoReport.issues.join(', ') : 'None'}`);
-          
+
           // Pre-cleanup CTA if it was mistakenly appended inside articleData
           let rawJsonStr = JSON.stringify(articleData);
           const repairPrompt = buildRepairPrompt(topic, (seoReport && seoReport.issues) || [], rawJsonStr);
           const generated = callGemini(repairPrompt, 2, isDryRun);
-          
+
           articleData = cleanAndParseJson(generated.text);
           if (!articleData.primaryCategory && topic.category) {
             articleData.primaryCategory = topic.category;
@@ -468,7 +468,7 @@ function runDailyContentEngineLegacySync(options) {
 
 /**
  * SAFE MANUAL ONE-TIME PRODUCTION TEST
- * Bypasses the 'already generated' guard for today only, allowing exactly one extra 
+ * Bypasses the 'already generated' guard for today only, allowing exactly one extra
  * live article to be created via the normal production pipeline.
  * Use with caution.
  */
@@ -483,7 +483,7 @@ function testOneRealBlogPublish() {
     Logger.log('=== [MANUAL TEST RESULT] Real Publish Successful ===');
     Logger.log(`[TEST] Post ID: ${result.postId}`);
     Logger.log(`[TEST] Post URL: ${result.link}`);
-    
+
     return result;
   } catch (err) {
     Logger.log(`[MANUAL TEST FAILED] Pipeline aborted: ${err.message}`);
@@ -496,7 +496,7 @@ function testOneRealBlogPublish() {
  */
 function testAiCriticAcceptsVerifiedFacts() {
   Logger.log('=== [TEST] Starting testAiCriticAcceptsVerifiedFacts ===');
-  
+
   // A long, realistic mock article about children's tailoring to bypass the 500-word deterministic threshold
   const dummyArticle = {
     title: "Best Custom Tailoring for Children in Delhi",
@@ -514,24 +514,24 @@ function testAiCriticAcceptsVerifiedFacts() {
       <p>As a leading family clothing store in Kirari, AME Bazaar is dedicated to providing an unparalleled shopping and tailoring experience. Our physical retail store allows you to bring your children in, get precise measurements, and discuss your specific requirements with our master tailors. We offer a wide range of fabrics and design options to suit every occasion, from casual wear to heavy ethnic wear for weddings and festivals.</p>
 
       <p>We believe that fashion is for the whole family. While we are renowned for our extensive collection of men's and women's wear, our children's clothing section and dedicated children's tailoring services have made us a household name in Mubarakpur Road. We take pride in delivering garments that make your children look and feel their absolute best.</p>
-      
+
       <p>If you're tired of compromising on fit and quality, it's time to experience the difference of bespoke tailoring. AME Bazaar offers affordable, high-quality stitching services without compromising on style. We ensure timely delivery and a perfect fit, so you can focus on enjoying the special moments with your family.</p>
-      
+
       <p>At AME Bazaar, our goal is to build long-lasting relationships with our customers. We encourage you to visit our store, explore our collections, and consult with our tailoring experts. Your satisfaction is our top priority, and we continuously strive to exceed your expectations with every garment we create.</p>
 
       <h2>Frequently Asked Questions (FAQ)</h2>
       <h3>1. Do you stitch kids clothes?</h3>
       <p>Yes, we offer expert custom tailoring and alterations for children's clothing, ensuring a perfect and comfortable fit for your little ones.</p>
-      
+
       <h3>2. Where is AME Bazaar located?</h3>
       <p>Our physical retail store is conveniently located on Mubarakpur Road, Kirari, Delhi. We invite you to visit us and explore our collections.</p>
-      
+
       <h3>3. Can we bring our children to the store for measurements?</h3>
       <p>Absolutely! Since AME Bazaar is an offline physical retail store, we highly encourage you to bring your children in so our expert tailors can take precise measurements for their outfits.</p>
-      
+
       <h3>4. Can we leave a review of our experience?</h3>
       <p>Yes, we value your feedback! Please visit our official Google Reviews link at https://g.page/r/amebazaar/review to share your experience with AME Bazaar.</p>
-      
+
       <div id="ame-bazaar-cta-block"></div>
     `,
     faqs: [1, 2, 3, 4] // Mock array length 4 to pass deterministic checks
@@ -552,7 +552,7 @@ function testAiCriticAcceptsVerifiedFacts() {
  */
 function testRepairLoop() {
   Logger.log('=== [TEST] Starting testRepairLoop ===');
-  
+
   // A deliberately bad article that triggers multiple deterministic failures.
   const dummyFailedArticle = {
     title: "Bad Title",
@@ -561,24 +561,24 @@ function testRepairLoop() {
     contentHtml: "<p>This is a bad article missing the FAQ heading and focus keyword. It is also extremely short and thin.</p>",
     faqs: []
   };
-  
+
   const mockTopic = { title: "Premium Children's Ethnic Wear", focusKeyword: "children's ethnic wear", category: "Children's Wear" };
-  
+
   let articleData = dummyFailedArticle;
   let seoReport = runSeoAudit(articleData, mockTopic.focusKeyword, true);
-  
+
   Logger.log(`[TEST] Initial Audit - Score: ${seoReport.score}, HardFailure: ${seoReport.hardFailure}`);
   Logger.log(`[TEST] Initial Issues: ${seoReport.issues.join(', ')}`);
 
   let isPassing = false;
-  
+
   for (let repairAttempt = 1; repairAttempt <= 2; repairAttempt++) {
     Logger.log(`[REPAIR] Attempt ${repairAttempt}/2`);
     Logger.log(`[REPAIR] Input issues: ${seoReport.issues.join(', ')}`);
-    
+
     const repairPrompt = buildRepairPrompt(mockTopic, seoReport.issues, JSON.stringify(articleData));
     const generated = callGemini(repairPrompt, 2, true);
-    
+
           articleData = cleanAndParseJson(generated.text);
           if (!isDryRun && (!currentImgData || currentImgData.isFallback)) {
              const queries = (articleData.imageSemanticBrief && articleData.imageSemanticBrief.imageSearchQueries) || articleData.imageSearchQueries || [mockTopic.focusKeyword + ' ' + mockTopic.category];
@@ -596,17 +596,17 @@ function testRepairLoop() {
              }
           }
 
-    
+
     const evalData = JSON.parse(JSON.stringify(articleData));
     const ctaBlockHtml = generateCtaBlock(mockTopic.category);
     evalData.contentHtml = (evalData.contentHtml || '') + ctaBlockHtml;
-    
+
     seoReport = runSeoAudit(evalData, mockTopic.focusKeyword, true);
-    
+
     Logger.log(`[REPAIR] Repaired word count: ${seoReport.wordCount}`);
     Logger.log(`[REPAIR] Re-audit score: ${seoReport.score}/100`);
     Logger.log(`[REPAIR] Re-audit hardFailure: ${seoReport.hardFailure}`);
-    
+
     if (seoReport.score >= 90 && !seoReport.hardFailure) {
       Logger.log('[REPAIR] PASS');
       isPassing = true;
@@ -615,7 +615,7 @@ function testRepairLoop() {
       Logger.log('[REPAIR] FAIL');
     }
   }
-  
+
   if (isPassing) {
     Logger.log('[TEST PASSED] Repair loop successfully generated a passing article!');
   } else {
@@ -629,10 +629,10 @@ function testRepairLoop() {
  */
 function testTopicSpecificImageEngine() {
   Logger.log('=== [TEST] Starting testTopicSpecificImageEngine ===');
-  
+
   // Backup image history
   const originalHistoryRaw = PropertiesService.getScriptProperties().getProperty('AME_IMAGE_HISTORY');
-  
+
   // Reset Gemini call counter
   geminiCallsCount = 0;
   const startTime = new Date().getTime();
@@ -645,9 +645,9 @@ function testTopicSpecificImageEngine() {
     };
 
     Logger.log(`\n[IMAGE TEST] Topic: "${test.title}"`);
-    
+
     // Call Gemini to generate image queries and metadata
-    const prompt = `You are an AI-Visibility Image Planner. 
+    const prompt = `You are an AI-Visibility Image Planner.
 Generate descriptive image metadata and semantic brief for this article:
 Title: "${test.title}"
 Focus Keyword: "${test.focusKeyword}"
@@ -681,7 +681,7 @@ Return ONLY a JSON object with this exact structure:
   "imageTitle": "human-readable image title",
   "imageDescription": "A machine-readable description of the visual scene."
 }`;
-    
+
     let brief = null;
     let queries = [];
     let filename = '';
@@ -719,16 +719,16 @@ Return ONLY a JSON object with this exact structure:
         localContext: "Kirari/Delhi"
       };
     }
-    
+
     Logger.log(`[IMAGE TEST] Semantic Brief: ${JSON.stringify(brief)}`);
     Logger.log(`[IMAGE TEST] Queries: ${queries.join(', ')}`);
-    
+
     // Perform search and validation using the new 3-stage pipeline
     const imgData = fetchTopicSpecificImage(queries, test.category, test.focusKeyword, brief, altText, desc, test.title);
-    
+
     const endTime = new Date().getTime();
     const executionTimeSec = ((endTime - startTime) / 1000).toFixed(2);
-    
+
     if (!imgData || imgData.blob === null) {
       Logger.log(`\nIMAGE_TEST:`);
       Logger.log(`Search queries: ${queries.join(', ')}`);
@@ -746,10 +746,10 @@ Return ONLY a JSON object with this exact structure:
       Logger.log(`[IMAGE TEST] Verdict: FAIL (No valid image found or verified)`);
       return;
     }
-    
+
     const isUnique = !imgData.isFallback;
     const downloadSuccess = imgData.blob && imgData.blob.getBytes().length > 0;
-    
+
     Logger.log(`\nIMAGE_TEST:`);
     Logger.log(`Search queries: ${queries.join(', ')}`);
     Logger.log(`Candidates retrieved: ${imgData.retrievedCount}`);
@@ -768,13 +768,13 @@ Return ONLY a JSON object with this exact structure:
     Logger.log(`Final title: ${imgData.title}`);
     Logger.log(`Final description: ${imgData.description}`);
     Logger.log(`Schema image URL: ${imgData.url}`);
-    
+
     if (downloadSuccess && imgData.filename.includes('-') && imgData.altText && !imgData.isFallback) {
       Logger.log(`[IMAGE TEST] Verdict: PASS`);
     } else {
       Logger.log(`[IMAGE TEST] Verdict: FAIL (Invalid download or malformed metadata/fallback used)`);
     }
-    
+
   } finally {
     // Restore history
     if (originalHistoryRaw !== null) {
@@ -788,14 +788,14 @@ Return ONLY a JSON object with this exact structure:
 
 function runComprehensivePipelineTests() {
   Logger.log('=== [TEST] Starting runComprehensivePipelineTests ===');
-  
+
   const testTopic = {
     title: "Breathable Cotton Kurtis Kirari: Beat the Delhi Heat",
     focusKeyword: "breathable cotton kurtis",
     category: "Women's Wear",
     brief: "A guide on selecting the best cotton kurtis for summer comfort in Kirari, Delhi."
   };
-  
+
   let results = {
     seoAudit: 'PENDING',
     aeoAnswer: 'PENDING',
@@ -821,14 +821,14 @@ function runComprehensivePipelineTests() {
     Logger.log('[TEST] Requesting initial generation...');
     const generated = callGemini(systemPrompt, 3, true);
     const articleData = cleanAndParseJson(generated.text);
-    
+
     // 2. Image Search & Metadata Checks
     const queries = (articleData.imageSemanticBrief && articleData.imageSemanticBrief.imageSearchQueries) || articleData.imageSearchQueries || [];
     results.imageRetrieval = queries.length >= 3 ? 'PASS' : 'FAIL';
-    
+
     Logger.log('[TEST] Executing Image Search...');
     const imgData = fetchTopicSpecificImage(queries, testTopic.category, testTopic.focusKeyword, articleData.imageSemanticBrief, articleData.imageAltText, articleData.imageDescription, testTopic.title);
-    
+
     if (imgData) {
       const isFallback = imgData.isFallback;
       if (imgData.filename) {
@@ -841,7 +841,7 @@ function runComprehensivePipelineTests() {
       results.imageFilename = (articleData.imageFilename && articleData.imageFilename.endsWith('.webp') && articleData.imageFilename.includes('-')) ? 'PASS' : 'FAIL';
       results.imageAlt = (articleData.imageAltText && articleData.imageAltText.length > 10) ? 'PASS' : 'FAIL';
       results.imageDescription = (articleData.imageDescription && articleData.imageDescription.length > 20) ? 'PASS' : 'FAIL';
-      
+
       // Multimodal relevance & semantic alignment checks
       const visualRelevancePrompt = `Evaluate if this image visual metadata matches the article topic:
 Topic: ${testTopic.title}
@@ -866,7 +866,7 @@ Return JSON: { "aligned": true }`;
     // 3. Schema & Linking Audit
     const schema = buildArticleSchema(articleData);
     results.schemaCorrectness = (schema["@type"] === 'Article' && schema.headline && schema.image) ? 'PASS' : 'FAIL';
-    
+
     // Internal links validation
     const hrefRegex = /href=["']([^"']+)["']/g;
     let match;
@@ -885,31 +885,31 @@ Return JSON: { "aligned": true }`;
     let evalData = JSON.parse(JSON.stringify(articleData));
     evalData.imageUrl = imgData ? imgData.url : '';
     evalData.isFallbackImage = imgData ? imgData.isFallback : true;
-    
+
     let ctaBlockHtml = generateCtaBlock(testTopic.category);
     evalData.contentHtml = (evalData.contentHtml || '') + ctaBlockHtml;
-    
+
     evalData.isPipelineTest = true;
     let seoReport = runSeoAudit(evalData, testTopic.focusKeyword, true);
-    
+
     results.seoAudit = (seoReport.score >= 90 && !seoReport.hardFailure) ? 'PASS' : 'FAIL';
     Logger.log('[TEST DEBUG] Initial SEO Audit Issues: ' + (seoReport.issues || []).join(', '));
 
     if (seoReport.hardFailure || seoReport.score < 90) {
       Logger.log('[TEST] Initial audit failed. Running repair loop...');
       results.repairLoop = 'FAIL';
-      
+
       for (let repairAttempt = 1; repairAttempt <= 2; repairAttempt++) {
         Logger.log(`[TEST REPAIR] Attempt ${repairAttempt}/2`);
         const repairPrompt = buildRepairPrompt(testTopic, seoReport.issues, JSON.stringify(articleData));
         const repairedGen = callGemini(repairPrompt, 2, true);
         const parsedRepair = cleanAndParseJson(repairedGen.text);
-        
+
         // Update articleData
         for (const k in parsedRepair) {
           articleData[k] = parsedRepair[k];
         }
-        
+
         evalData = JSON.parse(JSON.stringify(articleData));
         evalData.imageUrl = imgData ? imgData.url : '';
         evalData.isFallbackImage = imgData ? imgData.isFallback : true;
@@ -918,7 +918,7 @@ Return JSON: { "aligned": true }`;
         seoReport = runSeoAudit(evalData, testTopic.focusKeyword, true);
         Logger.log(`[TEST REPAIR] Attempt ${repairAttempt} results - Score: ${seoReport.score}, HardFailure: ${seoReport.hardFailure}`);
         Logger.log('[TEST DEBUG] Repaired SEO Audit Issues: ' + (seoReport.issues || []).join(', '));
-        
+
         if (seoReport.score >= 90 && !seoReport.hardFailure) {
           results.repairLoop = 'PASS';
           results.seoAudit = 'PASS';
@@ -950,7 +950,52 @@ Return JSON: { "aligned": true }`;
   for (const key in results) {
     Logger.log(`[COMPREHENSIVE TEST] ${key}: ${results[key]}`);
   }
-  
+
   return results;
 }
 
+
+
+function repairTriggers() {
+  if (typeof ScriptApp === 'undefined') return;
+  const triggers = ScriptApp.getProjectTriggers();
+
+  let dailyTriggers = [];
+  let watchdogTriggers = [];
+
+  for (const trigger of triggers) {
+    if (trigger.getHandlerFunction() === 'runDailyContentEngine') {
+      dailyTriggers.push(trigger);
+    } else if (trigger.getHandlerFunction() === 'watchdogTrigger') {
+      watchdogTriggers.push(trigger);
+    }
+  }
+
+  if (dailyTriggers.length === 0) {
+    ScriptApp.newTrigger('runDailyContentEngine')
+      .timeBased()
+      .everyDays(1)
+      .atHour(11)
+      .inTimezone('Asia/Kolkata')
+      .create();
+    Logger.log('[TRIGGER] Restored missing daily runDailyContentEngine trigger.');
+  } else if (dailyTriggers.length > 1) {
+    for (let i = 1; i < dailyTriggers.length; i++) {
+      ScriptApp.deleteTrigger(dailyTriggers[i]);
+    }
+    Logger.log('[TRIGGER] Removed duplicate runDailyContentEngine triggers.');
+  }
+
+  if (watchdogTriggers.length === 0) {
+    ScriptApp.newTrigger('watchdogTrigger')
+      .timeBased()
+      .everyMinutes(15)
+      .create();
+    Logger.log('[TRIGGER] Restored missing watchdogTrigger.');
+  } else if (watchdogTriggers.length > 1) {
+    for (let i = 1; i < watchdogTriggers.length; i++) {
+      ScriptApp.deleteTrigger(watchdogTriggers[i]);
+    }
+    Logger.log('[TRIGGER] Removed duplicate watchdogTrigger triggers.');
+  }
+}

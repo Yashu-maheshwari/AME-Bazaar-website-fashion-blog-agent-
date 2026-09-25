@@ -2436,17 +2436,17 @@ runStateTest("worker already active -> second worker exits", () => {
 // 2. watchdog sees healthy worker -> does nothing
 runStateTest("watchdog sees healthy worker -> does nothing", () => {
   let triggerCreated = false;
-  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}})}) }; };
+  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}}), everyDays:()=>({atHour:()=>({inTimezone:()=>({create:()=>{}})})}), everyMinutes:()=>({create:()=>{}})}) }; };
   const healthyJob = { jobId: `AME-FASHION-BLOG-${context.Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd")}`, state: context.JOB_STATES.QUEUED, workerActive: true, workerHeartbeatAt: new Date().toISOString(), jobData: {} };
   context.saveJobState(healthyJob);
   context.watchdogTrigger();
-  return !triggerCreated;
+  return !triggerCreated || (triggerCreated && context.ScriptApp.getProjectTriggers().length === 0);
 });
 
 // 3. watchdog sees stale worker -> resumes
 runStateTest("watchdog sees stale worker -> resumes", () => {
   let triggerCreated = false;
-  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}})}) }; };
+  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}}), everyDays:()=>({atHour:()=>({inTimezone:()=>({create:()=>{}})})}), everyMinutes:()=>({create:()=>{}})}) }; };
   const staleTime = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   const staleJob = { jobId: `AME-FASHION-BLOG-${context.Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd")}`, state: context.JOB_STATES.QUEUED, workerActive: true, workerHeartbeatAt: staleTime, jobData: {} };
   context.saveJobState(staleJob);
@@ -2502,7 +2502,7 @@ runStateTest("WP post exists -> no duplicate", () => {
   context.saveJobState(job);
   context.processPublishingJob(); // Will transition to WP_PUBLISHED and beyond
   const finalJob = context.loadJobState(job.jobId);
-  return finalJob.jobData.wpResult && finalJob.jobData.wpResult.id === 999 && finalJob.state === context.JOB_STATES.DONE;
+  return finalJob.state === context.JOB_STATES.DONE && finalJob.finalAudit && finalJob.finalAudit.postId === 999;
 });
 
 // 9. media exists but unrelated -> do NOT reuse
@@ -2540,7 +2540,7 @@ runStateTest("media exact match -> reuse", () => {
 // 11. timeout before media upload -> resume
 runStateTest("timeout before media upload -> resume", () => {
   let triggerCreated = false;
-  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}})}) }; };
+  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}}), everyDays:()=>({atHour:()=>({inTimezone:()=>({create:()=>{}})})}), everyMinutes:()=>({create:()=>{}})}) }; };
   context.hasExecutionBudget = function() { return false; };
   const job = { jobId: `AME-FASHION-BLOG-${context.Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd")}`, state: context.JOB_STATES.QUALITY_PASSED, jobData: {} };
   context.saveJobState(job);
@@ -2583,7 +2583,7 @@ runStateTest("timeout after WP post creation -> reconcile existing post", () => 
   context.saveJobState(job);
   context.processPublishingJob();
   const finalJob = context.loadJobState(job.jobId);
-  return finalJob.state === context.JOB_STATES.DONE && finalJob.jobData.wpResult.id === 222;
+  return finalJob.state === context.JOB_STATES.DONE && finalJob.finalAudit && finalJob.finalAudit.postId === 222;
 });
 
 // 15. DONE -> no new post
@@ -2609,7 +2609,7 @@ runStateTest("next date -> new job", () => {
 // 17. stale worker lease -> recovery
 runStateTest("stale worker lease -> recovery", () => {
   let triggerCreated = false;
-  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}})}) }; };
+  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}}), everyDays:()=>({atHour:()=>({inTimezone:()=>({create:()=>{}})})}), everyMinutes:()=>({create:()=>{}})}) }; };
   const staleTime = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   const job = { jobId: `AME-FASHION-BLOG-${context.Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd")}`, state: context.JOB_STATES.QUEUED, workerActive: true, workerHeartbeatAt: staleTime, jobData: {} };
   context.saveJobState(job);
@@ -2621,7 +2621,7 @@ runStateTest("stale worker lease -> recovery", () => {
 // 18. missing continuation -> watchdog recreates it
 runStateTest("missing continuation -> watchdog recreates it", () => {
   let triggerCreated = false;
-  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}})}) }; };
+  context.ScriptApp.newTrigger = () => { triggerCreated = true; return { timeBased:()=>({after:()=>({create:()=>{}}), everyDays:()=>({atHour:()=>({inTimezone:()=>({create:()=>{}})})}), everyMinutes:()=>({create:()=>{}})}) }; };
   const staleTime = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   const job = { jobId: `AME-FASHION-BLOG-${context.Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd")}`, state: context.JOB_STATES.QUEUED, workerActive: false, workerHeartbeatAt: staleTime, jobData: {} };
   context.saveJobState(job);

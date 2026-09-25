@@ -26,7 +26,7 @@ var DRIVE_SUBFOLDER_NAME = "publishing-jobs";
 
 function getOrSetupJobFolder() {
   if (typeof DriveApp === 'undefined') return null; // For local tests
-  
+
   let rootIter = DriveApp.getFoldersByName(DRIVE_FOLDER_NAME);
   let rootFolder;
   if (rootIter.hasNext()) {
@@ -34,7 +34,7 @@ function getOrSetupJobFolder() {
   } else {
     rootFolder = DriveApp.createFolder(DRIVE_FOLDER_NAME);
   }
-  
+
   let subIter = rootFolder.getFoldersByName(DRIVE_SUBFOLDER_NAME);
   let subFolder;
   if (subIter.hasNext()) {
@@ -42,7 +42,7 @@ function getOrSetupJobFolder() {
   } else {
     subFolder = rootFolder.createFolder(DRIVE_SUBFOLDER_NAME);
   }
-  
+
   return subFolder;
 }
 
@@ -52,11 +52,24 @@ function getJobPropertyKey(jobId) {
 
 function loadJobState(jobId) {
   const metaRaw = PropertiesService.getScriptProperties().getProperty(getJobPropertyKey(jobId));
-  if (!metaRaw) return null;
-  
+  if (!metaRaw) {
+    // Check if an audit record exists (meaning it's DONE and cleaned up)
+    const dateStr = jobId.replace("AME-FASHION-BLOG-", "");
+    const auditRaw = PropertiesService.getScriptProperties().getProperty(`AME_JOB_AUDIT_${dateStr}`);
+    if (auditRaw) {
+      return {
+        jobId: jobId,
+        state: JOB_STATES.DONE,
+        finalAudit: JSON.parse(auditRaw),
+        jobData: {}
+      };
+    }
+    return null;
+  }
+
   const meta = JSON.parse(metaRaw);
   let jobData = {};
-  
+
   if (meta.fileId && typeof DriveApp !== 'undefined') {
     try {
       const file = DriveApp.getFileById(meta.fileId);
@@ -69,7 +82,7 @@ function loadJobState(jobId) {
       jobData = JSON.parse(global.mockDriveStorage[meta.fileId]);
     }
   }
-  
+
   return {
     jobId: jobId,
     state: meta.state,
@@ -87,12 +100,12 @@ function loadJobState(jobId) {
 
 function saveJobState(job) {
   job.lastUpdated = new Date().toISOString();
-  
+
   if (typeof DriveApp !== 'undefined') {
     const folder = getOrSetupJobFolder();
     const fileName = `${job.jobId}.json`;
     const payloadStr = JSON.stringify(job.jobData || {});
-    
+
     if (job.fileId) {
       try {
         const file = DriveApp.getFileById(job.fileId);
@@ -110,7 +123,7 @@ function saveJobState(job) {
     job.fileId = job.fileId || `mock_file_${job.jobId}`;
     global.mockDriveStorage[job.fileId] = JSON.stringify(job.jobData || {});
   }
-  
+
   const meta = {
     state: job.state,
     fileId: job.fileId,
@@ -122,7 +135,7 @@ function saveJobState(job) {
     workerExecutionId: job.workerExecutionId,
     finalAudit: job.finalAudit
   };
-  
+
   PropertiesService.getScriptProperties().setProperty(getJobPropertyKey(job.jobId), JSON.stringify(meta));
 }
 
@@ -130,7 +143,7 @@ function cleanupJobPayload(jobId) {
   const metaRaw = PropertiesService.getScriptProperties().getProperty(getJobPropertyKey(jobId));
   if (!metaRaw) return;
   const meta = JSON.parse(metaRaw);
-  
+
   if (meta.fileId && typeof DriveApp !== 'undefined') {
     try {
       DriveApp.getFileById(meta.fileId).setTrashed(true);
@@ -139,5 +152,8 @@ function cleanupJobPayload(jobId) {
       Logger.log(`[WARN] Failed to trash file for ${jobId}`);
     }
   }
+
+  // Clean up the main meta property now that audit is retained
+  PropertiesService.getScriptProperties().deleteProperty(getJobPropertyKey(jobId));
 }
 

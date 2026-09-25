@@ -75,7 +75,32 @@ function publishToGoogleBusinessProfile(articleData, publishedUrl, retries = 3) 
     }
   };
 
+
   const url = `https://mybusiness.googleapis.com/v4/accounts/${accountId}/locations/${locationId}/localPosts`;
+
+  // Idempotency check: see if a post with this URL already exists
+  try {
+    const listRes = UrlFetchApp.fetch(url, {
+      method: 'get',
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+      muteHttpExceptions: true
+    });
+
+    if (listRes.getResponseCode() === 200) {
+      const listData = JSON.parse(listRes.getContentText());
+      if (listData.localPosts && listData.localPosts.length > 0) {
+        for (const pt of listData.localPosts) {
+          if (pt.summary && pt.summary.includes(publishedUrl)) {
+            Logger.log(`[GBP] Idempotency match: Found existing GBP post ${pt.name}. Skipping duplicate.`);
+            return { success: true, postId: pt.name };
+          }
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log(`[WARN] GBP idempotency check failed, proceeding to publish: ${err.message}`);
+  }
+
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {

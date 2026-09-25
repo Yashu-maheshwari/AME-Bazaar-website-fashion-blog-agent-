@@ -43,7 +43,7 @@ function updateHeartbeat(job) {
 function processPublishingJob(e) {
   initScriptExecutionTimer();
   Logger.log('[JOB] Starting processPublishingJob worker...');
-  
+
   const lock = LockService.getScriptLock();
   try {
     if (!lock.tryLock(10000)) { // 10 seconds wait
@@ -58,21 +58,21 @@ function processPublishingJob(e) {
   const todayStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd");
   const jobId = `AME-FASHION-BLOG-${todayStr}`;
   let job = loadJobState(jobId);
-  
+
   if (!job) {
     Logger.log(`[JOB] No job found for ${jobId}. Exiting.`);
     if (typeof lock.releaseLock === 'function') lock.releaseLock();
     return;
   }
-  
+
   if (job.state === JOB_STATES.DONE || job.state === JOB_STATES.FAILED_PERMANENT) {
     Logger.log(`[JOB] Job ${jobId} is already in terminal state ${job.state}. Exiting.`);
     if (typeof lock.releaseLock === 'function') lock.releaseLock();
     return;
   }
-  
+
   const now = new Date().getTime();
-  
+
   if (job.state === JOB_STATES.RETRY_WAIT) {
     const lastUpdated = new Date(job.lastUpdated).getTime();
     const delayMs = calculateBackoffDelay(job.retryCount || 0);
@@ -103,10 +103,10 @@ function processPublishingJob(e) {
         if (typeof lock.releaseLock === 'function') lock.releaseLock();
         return;
       }
-      
+
       updateHeartbeat(job);
       Logger.log(`[JOB] Processing state: ${job.state}`);
-      
+
       switch(job.state) {
         case JOB_STATES.QUEUED:
           const queueResult = pickTopicFromQueue();
@@ -119,14 +119,14 @@ function processPublishingJob(e) {
           job.state = JOB_STATES.TOPIC_SELECTED;
           updateHeartbeat(job);
           break;
-          
+
         case JOB_STATES.TOPIC_SELECTED:
         case JOB_STATES.FAILED_RETRYABLE:
           const topic = job.jobData.topic;
           const repairAttempt = job.jobData.repairAttempt || 0;
           let generated = null;
           let articleData = null;
-          
+
           if (repairAttempt === 0) {
             const systemPrompt = buildContentPrompt(topic);
             generated = callGemini(systemPrompt, 3, false);
@@ -140,19 +140,19 @@ function processPublishingJob(e) {
              for (const k in articleData) { oldData[k] = articleData[k]; }
              articleData = oldData;
           }
-          
+
           if (!articleData.primaryCategory && topic.category) {
             articleData.primaryCategory = topic.category;
           }
           if ((!articleData.secondaryCategories || articleData.secondaryCategories.length === 0) && topic.secondaryCategories) {
             articleData.secondaryCategories = topic.secondaryCategories;
           }
-          
+
           job.jobData.articleData = articleData;
           job.state = JOB_STATES.CONTENT_GENERATED;
           updateHeartbeat(job);
           break;
-          
+
         case JOB_STATES.CONTENT_GENERATED:
           const aData = job.jobData.articleData;
           const t = job.jobData.topic;
@@ -160,17 +160,17 @@ function processPublishingJob(e) {
              aData.imageSemanticBrief = deriveImageSemanticBrief(t, aData);
           }
           const queries = (aData.imageSemanticBrief && aData.imageSemanticBrief.imageSearchQueries) || aData.imageSearchQueries || [t.focusKeyword + ' ' + t.category];
-          
+
           let imgData = job.jobData.imgData;
           if (!imgData || imgData.isFallback) {
              imgData = fetchTopicSpecificImage(queries, t.category, t.focusKeyword, aData.imageSemanticBrief, aData.imageAltText, aData.imageDescription, t.title);
-             
+
              if (imgData && imgData.blob) {
                 delete imgData.blob; // Strip blob out to prevent massive json parsing fail
              }
              job.jobData.imgData = imgData;
           }
-          
+
           if (imgData) {
             aData.imageUrl = imgData.url;
             aData.isFallbackImage = imgData.isFallback;
@@ -185,19 +185,19 @@ function processPublishingJob(e) {
           job.state = JOB_STATES.IMAGE_SELECTED;
           updateHeartbeat(job);
           break;
-          
+
         case JOB_STATES.IMAGE_SELECTED:
           const evalAData = job.jobData.articleData;
           const evalT = job.jobData.topic;
-          
+
           const evalDataClone = JSON.parse(JSON.stringify(evalAData));
           const ctaBlockHtml = generateCtaBlock(evalT.category);
           evalDataClone.contentHtml = appendStructuredDataSchemas((evalDataClone.contentHtml || '') + ctaBlockHtml, evalDataClone);
-          
+
           const seoReport = runSeoAudit(evalDataClone, evalT.focusKeyword, false);
           job.jobData.seoReport = seoReport;
           job.jobData.seoIssues = seoReport.issues || [];
-          
+
           if (seoReport.score >= 90 && !seoReport.hardFailure) {
             job.jobData.finalEvalData = evalDataClone;
             job.state = JOB_STATES.QUALITY_PASSED;
@@ -205,9 +205,7 @@ function processPublishingJob(e) {
             job.jobData.repairAttempt = (job.jobData.repairAttempt || 0) + 1;
             if (job.jobData.repairAttempt > MAX_REPAIR_ATTEMPTS) {
                Logger.log(`[JOB] Topic failed quality after ${MAX_REPAIR_ATTEMPTS} repairs. Discarding topic.`);
-               if (job.jobData.topicAttemptCount >= MAX_TOPIC_ATTEMPTS) {
-                 throw new Error(`Failed to generate passing article after ${MAX_TOPIC_ATTEMPTS} topics. (Unrecoverable validation)`);
-               }
+               Logger.log(`[JOB] Attempt count for today is now ${job.jobData.topicAttemptCount}. Re-queueing for fresh topic.`);
                job.state = JOB_STATES.QUEUED;
             } else {
                job.state = JOB_STATES.TOPIC_SELECTED;
@@ -215,15 +213,15 @@ function processPublishingJob(e) {
           }
           updateHeartbeat(job);
           break;
-          
+
         case JOB_STATES.QUALITY_PASSED:
           let mediaId = null;
           const finalEval = job.jobData.finalEvalData;
           const imgD = job.jobData.imgData;
-          
+
           if (imgD && imgD.url) {
              const targetFilename = finalEval.imageFilename || `${finalEval.slug}.webp`;
-             
+
              Logger.log(`[JOB] Idempotency check for media: ${targetFilename}`);
              const checkUrl = `${getWordPressUrl()}/wp-json/wp/v2/media?search=${encodeURIComponent(targetFilename)}`;
              const headers = getWordPressHeaders();
@@ -266,15 +264,15 @@ function processPublishingJob(e) {
           job.state = JOB_STATES.MEDIA_UPLOADED;
           updateHeartbeat(job);
           break;
-          
+
         case JOB_STATES.MEDIA_UPLOADED:
           const pFinal = job.jobData.finalEvalData;
           const pTopic = job.jobData.topic;
           pFinal.focusKeyword = pFinal.focusKeyword || pTopic.focusKeyword;
-          
+
           let postId = null;
           let postLink = null;
-          
+
           Logger.log(`[JOB] Idempotency check for post slug: ${pFinal.slug}`);
           const postCheckUrl = `${getWordPressUrl()}/wp-json/wp/v2/posts?slug=${encodeURIComponent(pFinal.slug)}&status=any`;
           const pHeaders = getWordPressHeaders();
@@ -297,21 +295,21 @@ function processPublishingJob(e) {
           } else {
               wpResult = publishToWordPress(pFinal, job.jobData.mediaId, null, pTopic);
           }
-          
+
           job.jobData.wpResult = wpResult;
           job.state = JOB_STATES.WP_PUBLISHED;
           updateHeartbeat(job); // IMMEDIATELY update after post creation
           break;
-          
+
         case JOB_STATES.WP_PUBLISHED:
           const finalWp = job.jobData.wpResult;
           const finalTopic = job.jobData.topic;
-          
+
           let gbpResult = { success: false, postId: "NONE" };
           if (finalWp && finalWp.link) {
             gbpResult = publishToGoogleBusinessProfile(job.jobData.finalEvalData, finalWp.link);
           }
-          
+
           const dailyHistory = getDailyExecutionHistory();
           dailyHistory[todayStr] = {
             publishedAt: new Date().toISOString(),
@@ -327,11 +325,11 @@ function processPublishingJob(e) {
             link: finalWp.link,
             gbpPostId: gbpResult.postId || "NONE"
           });
-          
+
           job.state = JOB_STATES.PUBLISH_VERIFIED;
           updateHeartbeat(job);
           break;
-          
+
         case JOB_STATES.PUBLISH_VERIFIED:
           const jDate = new Date();
           const finalAudit = {
@@ -347,12 +345,18 @@ function processPublishingJob(e) {
             attemptCount: job.jobData.topicAttemptCount || 1,
             completedAt: jDate.toISOString()
           };
-          
+
           job.state = JOB_STATES.DONE;
           job.workerActive = false;
           job.finalAudit = finalAudit;
+
+          PropertiesService.getScriptProperties().setProperty(
+            `AME_JOB_AUDIT_${todayStr}`,
+            JSON.stringify(finalAudit)
+          );
+
           saveJobState(job);
-          
+
           cleanupJobPayload(job.jobId);
           Logger.log(`[JOB] Job ${job.jobId} completed successfully.`);
           break;
@@ -360,7 +364,7 @@ function processPublishingJob(e) {
     }
   } catch (err) {
     Logger.log(`[JOB] Exception in state ${job.state}: ${err.message}`);
-    
+
     if (err.message.includes("(Unrecoverable validation)")) {
        job.state = JOB_STATES.FAILED_PERMANENT;
        job.workerActive = false;
@@ -372,7 +376,7 @@ function processPublishingJob(e) {
        job.state = JOB_STATES.RETRY_WAIT;
        job.workerActive = false;
        saveJobState(job);
-       
+
        const delayMs = calculateBackoffDelay(job.retryCount);
        scheduleContinuation(delayMs);
     }
@@ -388,8 +392,11 @@ function processPublishingJob(e) {
 }
 
 function watchdogTrigger() {
+  if (typeof repairTriggers === 'function') {
+    repairTriggers();
+  }
   Logger.log('[WATCHDOG] Checking stuck jobs...');
-  
+
   const lock = LockService.getScriptLock();
   try {
     if (!lock.tryLock(5000)) { // 5 seconds wait
@@ -404,12 +411,12 @@ function watchdogTrigger() {
     const todayStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd");
     const jobId = `AME-FASHION-BLOG-${todayStr}`;
     const job = loadJobState(jobId);
-    
+
     if (!job) {
       Logger.log('[WATCHDOG] No job found for today. Exiting.');
       return;
     }
-    
+
     if (job.state === JOB_STATES.DONE || job.state === JOB_STATES.FAILED_PERMANENT) {
       Logger.log(`[WATCHDOG] Job is in terminal state ${job.state}.`);
       return;
@@ -428,20 +435,20 @@ function watchdogTrigger() {
               ScriptApp.deleteTrigger(trigger);
             }
           }
-          scheduleContinuation(1000); 
+          scheduleContinuation(1000);
        }
        return;
     }
-    
+
     if (job.workerActive) {
        const heartbeatTime = new Date(job.workerHeartbeatAt || job.workerStartedAt || job.lastUpdated).getTime();
        const inactiveMs = now - heartbeatTime; Logger.log('[DEBUG WATCHDOG] heartbeatTime: ' + heartbeatTime + ' inactiveMs: ' + inactiveMs + ' workerActive: ' + job.workerActive);
-       
+
        if (inactiveMs > 8 * 60 * 1000) {
          Logger.log(`[WATCHDOG] Job ${jobId} active but heartbeat stale for > 8 mins. Clearing lease and resuming...`);
          job.workerActive = false;
          saveJobState(job);
-         
+
          const triggers = ScriptApp.getProjectTriggers();
          for (const trigger of triggers) {
            if (trigger.getHandlerFunction() === 'processPublishingJob') {
