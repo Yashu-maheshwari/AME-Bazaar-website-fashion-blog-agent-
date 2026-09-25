@@ -678,6 +678,26 @@ function uploadMediaToWordPress(imageBlob, filename, metadata) {
     imageBlob.setName(filename);
   }
 
+  // Idempotency check: see if media already exists
+  const searchUrl = `${wpUrl}/wp-json/wp/v2/media?search=${encodeURIComponent(metadata.title || filename)}`;
+  try {
+    const searchRes = UrlFetchApp.fetch(searchUrl, {
+      method: 'get',
+      headers: { 'Authorization': authHeader, 'User-Agent': 'AME-Bazaar-GAS-Agent/1.0' },
+      muteHttpExceptions: true
+    });
+    if (searchRes.getResponseCode() === 200) {
+      const existingMedia = JSON.parse(searchRes.getContentText());
+      if (existingMedia && existingMedia.length > 0) {
+        // Just take the first match as it matches our search
+        Logger.log(`[WP] Reconciled existing media found by search. Media ID: ${existingMedia[0].id}. Skipping duplicate upload.`);
+        return existingMedia[0].id;
+      }
+    }
+  } catch (err) {
+    Logger.log(`[WARN] Idempotency media search failed: ${err.message}`);
+  }
+
   const uploadUrl = `${wpUrl}/wp-json/wp/v2/media`;
 
   try {
@@ -1368,3 +1388,4 @@ function logSelectedImage(source, photoId, method, detScore, signals, visionScor
   Logger.log(`Title: ${meta.title}`);
   Logger.log(`Description: ${meta.description}`);
 }
+

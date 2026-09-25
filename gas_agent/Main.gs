@@ -134,16 +134,13 @@ function testAiContentEngine() {
  * Runs daily at approximately 11:00 AM IST.
  */
 function setupDailyTrigger() {
-  // Delete any existing daily triggers for this function to prevent duplicate schedules
   const triggers = ScriptApp.getProjectTriggers();
   for (const trigger of triggers) {
-    if (trigger.getHandlerFunction() === 'runDailyContentEngine') {
+    if (trigger.getHandlerFunction() === 'runDailyContentEngine' || trigger.getHandlerFunction() === 'watchdogTrigger') {
       ScriptApp.deleteTrigger(trigger);
-      Logger.log(`[TRIGGER] Deleted existing trigger ID: ${trigger.getUniqueId()}`);
     }
   }
 
-  // Create new trigger for 11:00 AM daily
   ScriptApp.newTrigger('runDailyContentEngine')
     .timeBased()
     .everyDays(1)
@@ -151,9 +148,13 @@ function setupDailyTrigger() {
     .inTimezone('Asia/Kolkata')
     .create();
 
-  Logger.log('[TRIGGER] Successfully configured daily time-driven trigger for ~11:00 AM IST.');
-}
+  ScriptApp.newTrigger('watchdogTrigger')
+    .timeBased()
+    .everyMinutes(15)
+    .create();
 
+  Logger.log('[TRIGGER] Configured daily 11:00 AM IST trigger and 15-minute watchdog.');
+}
 /**
  * Returns a detailed list of all project triggers and their attributes.
  * @returns {Array<Object>}
@@ -210,6 +211,28 @@ function doGet(e) {
  * Default schedule: Daily ~11:00 AM IST.
  */
 function runDailyContentEngine(options) {
+  options = options || {};
+  if (options.isDryRun || options.forceTopicTitle) {
+    return runDailyContentEngineLegacySync(options);
+  }
+  const todayStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd");
+  const jobId = `AME-FASHION-BLOG-${todayStr}`;
+  let job = loadJobState(jobId);
+  if (!job) {
+    job = { jobId: jobId, state: JOB_STATES.QUEUED, jobData: {} };
+    saveJobState(job);
+    Logger.log(`[JOB] Created new job ${jobId}`);
+  } else if (job.state === JOB_STATES.DONE || job.state === JOB_STATES.FAILED_PERMANENT) {
+    Logger.log(`[JOB] Job ${jobId} already ${job.state}. Exiting.`);
+    return { success: true, message: `Already completed for ${todayStr}`, skipped: true };
+  } else {
+    Logger.log(`[JOB] Job ${jobId} exists in state ${job.state}. Resuming.`);
+  }
+  scheduleContinuation();
+  return { success: true, jobId: jobId, state: job.state };
+}
+
+function runDailyContentEngineLegacySync(options) {
   options = options || {};
   if (typeof initScriptExecutionTimer === 'function') {
     initScriptExecutionTimer();
@@ -930,3 +953,4 @@ Return JSON: { "aligned": true }`;
   
   return results;
 }
+

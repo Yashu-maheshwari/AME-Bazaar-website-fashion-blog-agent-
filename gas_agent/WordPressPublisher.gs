@@ -178,6 +178,36 @@ function publishToWordPress(articleData, mediaId = null, statusOverride = null, 
 
   Logger.log(`[WP] Resolved category IDs for publishing: ${categoryIds.join(', ')}`);
 
+  // Idempotency: Reconcile using deterministic slug before creating a post.
+  const slugToCheck = articleData.slug;
+  const searchUrl = `${wpUrl}/wp-json/wp/v2/posts?slug=${encodeURIComponent(slugToCheck)}&status=any`;
+  try {
+    const searchRes = UrlFetchApp.fetch(searchUrl, {
+      method: 'get',
+      headers: {
+        'Authorization': authHeader,
+        'User-Agent': 'AME-Bazaar-GAS-Agent/1.0'
+      },
+      muteHttpExceptions: true
+    });
+    
+    if (searchRes.getResponseCode() === 200) {
+      const existingPosts = JSON.parse(searchRes.getContentText());
+      if (existingPosts && existingPosts.length > 0) {
+        const existing = existingPosts[0];
+        Logger.log(`[WP] Reconciled existing post found by slug "${slugToCheck}". Post ID: ${existing.id}. Skipping duplicate creation.`);
+        return {
+          id: existing.id,
+          link: existing.link,
+          status: existing.status,
+          author: existing.author
+        };
+      }
+    }
+  } catch (err) {
+    Logger.log(`[WARN] Idempotency post search failed: ${err.message}`);
+  }
+
   const postStatus = statusOverride || WP_POST_STATUS;
   const url = `${wpUrl}/wp-json/wp/v2/posts`;
 
@@ -466,3 +496,4 @@ function getOrCreateWordPressCategory(name) {
   }
   return null;
 }
+

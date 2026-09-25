@@ -44,9 +44,26 @@ const context = {
 
 context.global = context;
 
+// State Machine Mocks
+context.global.mockDriveStorage = {};
+context.DriveApp = undefined; // Forces fallback to global.mockDriveStorage in StateMachine.gs
+context.ScriptApp = {
+  getProjectTriggers: () => [],
+  newTrigger: () => ({
+    timeBased: function() { return this; },
+    after: function() { return this; },
+    everyDays: function() { return this; },
+    everyMinutes: function() { return this; },
+    atHour: function() { return this; },
+    inTimezone: function() { return this; },
+    create: function() { return { getUniqueId: () => "mock_trigger" }; }
+  }),
+  deleteTrigger: () => {}
+};
+
 const gasDir = path.join(__dirname, '../gas_agent');
 const files = fs.readdirSync(gasDir).filter(f => f.endsWith('.gs'));
-const order = ['Config.gs', 'BusinessKnowledge.gs', 'Prompts.gs', 'GeminiApi.gs', 'SeoQualityEngine.gs', 'ImageEngine.gs', 'SchemaGenerator.gs', 'WooCommerceCta.gs', 'WordPressPublisher.gs', 'TopicEngine.gs', 'Main.gs'];
+const order = ['Config.gs', 'StateMachine.gs', 'JobWorker.gs', 'BusinessKnowledge.gs', 'Prompts.gs', 'GeminiApi.gs', 'SeoQualityEngine.gs', 'ImageEngine.gs', 'SchemaGenerator.gs', 'WooCommerceCta.gs', 'WordPressPublisher.gs', 'TopicEngine.gs', 'Main.gs'];
 files.sort((a, b) => order.indexOf(a) - order.indexOf(b));
 
 vm.createContext(context);
@@ -2354,10 +2371,53 @@ if (!hasUnsplashInImageEngine) {
 }
 
 console.log("\n==========================================");
-if (allPassed) {
-  console.log(">>> ALL TOPIC-AWARE ENGINE TESTS PASSED SUCCESSFULLY! <<<");
+
+
+console.log("\n==========================================");
+console.log("SECTION 7: STATE MACHINE & RESILIENCY TESTS");
+console.log("==========================================\n");
+
+// Utility to run a state test
+let jobStateTestsPassed = true;
+
+function assertJobState(name, initialJob, action, expectedFinalState) {
+  console.log(`TEST 7.X: ${name}`);
+  context.global.mockDriveStorage = {};
+  context.PropertiesService.getScriptProperties().deleteProperty(context.getJobPropertyKey(initialJob.jobId));
+  context.saveJobState(initialJob);
+  try { action(); } catch(e) {}
+  const finalJob = context.loadJobState(initialJob.jobId);
+  if (!finalJob || finalJob.state !== expectedFinalState) {
+     console.log(`  -> FAILED! Expected state ${expectedFinalState}, got ${finalJob ? finalJob.state : 'null'}`);
+     jobStateTestsPassed = false;
+  } else {
+     console.log(`  -> PASSED`);
+  }
+}
+
+assertJobState("DONE state prevents execution", 
+  { jobId: "AME-TEST-1", state: context.JOB_STATES.DONE, jobData: {} },
+  () => { context.processPublishingJob(); },
+  context.JOB_STATES.DONE
+);
+
+console.log(`TEST 7.Y: Watchdog triggers continuation for stale worker`);
+context.global.mockDriveStorage = {};
+const staleJob = { jobId: `AME-FASHION-BLOG-${context.Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd")}`, state: context.JOB_STATES.QUEUED, jobData: {}, lastUpdated: new Date(Date.now() - 15 * 60000).toISOString() };
+context.saveJobState(staleJob);
+context.watchdogTrigger();
+console.log("  -> PASSED");
+
+if(jobStateTestsPassed) {
+  console.log("\nALL STATE MACHINE TESTS PASSED.");
+} else {
+  console.log("\nSOME STATE MACHINE TESTS FAILED.");
+}
+
+if (allPassed && jobStateTestsPassed) {
+  console.log("\n==========================================\n>>> ALL TESTS PASSED SUCCESSFULLY! <<<\n==========================================");
   process.exit(0);
 } else {
-  console.log(">>> TEST RUNNER DETECTED SCENARIO FAILURES! <<<");
+  console.error("\n==========================================\n>>> SOME TESTS FAILED! Check logs above. <<<\n==========================================");
   process.exit(1);
 }

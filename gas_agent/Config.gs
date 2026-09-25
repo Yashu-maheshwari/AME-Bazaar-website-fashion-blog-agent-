@@ -31,6 +31,7 @@ const SEO_QUALITY_GATE_THRESHOLD = 90;
 const SEO_MIN_WORD_COUNT_AUDIT = 500;
 const SEO_TARGET_WORD_COUNT = 600;
 const MAX_REPAIR_ATTEMPTS = 2;
+const MAX_TOPIC_ATTEMPTS = 3;
 
 // Default Centralized Business Information
 const DEFAULT_BUSINESS_CONFIG = {
@@ -212,4 +213,5 @@ function getRemainingExecutionBudgetMs() {
 function hasExecutionBudget(requiredMs = 30000) {
   return getRemainingExecutionBudgetMs() >= requiredMs;
 }
+
 
