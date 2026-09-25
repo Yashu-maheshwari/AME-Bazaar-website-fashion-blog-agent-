@@ -76,6 +76,11 @@ function loadJobState(jobId) {
     fileId: meta.fileId,
     retryCount: meta.retryCount || 0,
     lastUpdated: meta.lastUpdated,
+    workerActive: meta.workerActive || false,
+    workerStartedAt: meta.workerStartedAt,
+    workerHeartbeatAt: meta.workerHeartbeatAt,
+    workerExecutionId: meta.workerExecutionId,
+    finalAudit: meta.finalAudit,
     jobData: jobData
   };
 }
@@ -110,7 +115,12 @@ function saveJobState(job) {
     state: job.state,
     fileId: job.fileId,
     retryCount: job.retryCount,
-    lastUpdated: job.lastUpdated
+    lastUpdated: job.lastUpdated,
+    workerActive: job.workerActive || false,
+    workerStartedAt: job.workerStartedAt,
+    workerHeartbeatAt: job.workerHeartbeatAt,
+    workerExecutionId: job.workerExecutionId,
+    finalAudit: job.finalAudit
   };
   
   PropertiesService.getScriptProperties().setProperty(getJobPropertyKey(job.jobId), JSON.stringify(meta));

@@ -689,9 +689,12 @@ function uploadMediaToWordPress(imageBlob, filename, metadata) {
     if (searchRes.getResponseCode() === 200) {
       const existingMedia = JSON.parse(searchRes.getContentText());
       if (existingMedia && existingMedia.length > 0) {
-        // Just take the first match as it matches our search
-        Logger.log(`[WP] Reconciled existing media found by search. Media ID: ${existingMedia[0].id}. Skipping duplicate upload.`);
-        return existingMedia[0].id;
+        for (const m of existingMedia) {
+          if (m.slug && m.slug.includes(filename.replace(/\.[^/.]+$/, ""))) {
+            Logger.log(`[WP] Reconciled existing media found by search. Media ID: ${m.id}. Skipping duplicate upload.`);
+            return m.id;
+          }
+        }
       }
     }
   } catch (err) {
