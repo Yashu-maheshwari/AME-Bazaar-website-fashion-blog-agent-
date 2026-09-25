@@ -109,7 +109,7 @@ function processPublishingJob(e) {
 
       switch(job.state) {
         case JOB_STATES.QUEUED:
-          const queueResult = pickTopicFromQueue();
+          const queueResult = selectNextTopic();
           if (!queueResult || !queueResult.topic) {
              throw new Error("No topics available in queue.");
           }

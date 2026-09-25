@@ -2645,6 +2645,21 @@ runStateTest("final DONE audit record retained", () => {
 });
 
 
+
+// 21. QUEUED -> TOPIC_SELECTED transition without ReferenceError
+runStateTest("QUEUED -> TOPIC_SELECTED transition without ReferenceError", () => {
+  context.selectNextTopic = function() {
+    return { topic: { title: 'Mock Topic', focusKeyword: 'mock' }, memory: {} };
+  };
+  let checks = 0;
+  context.hasExecutionBudget = function() { checks++; return checks <= 1; }; // Only run one loop iteration
+  const job = { jobId: `AME-FASHION-BLOG-${context.Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd")}`, state: context.JOB_STATES.QUEUED, jobData: {} };
+  context.saveJobState(job);
+  context.processPublishingJob();
+  const finalJob = context.loadJobState(job.jobId);
+  return finalJob && finalJob.state === context.JOB_STATES.TOPIC_SELECTED && finalJob.jobData.topic.title === 'Mock Topic';
+});
+
 if (allPassed && jobStateTestsPassed) {
   console.log("\n==========================================\n>>> ALL TESTS PASSED SUCCESSFULLY! <<<\n==========================================");
   process.exit(0);
