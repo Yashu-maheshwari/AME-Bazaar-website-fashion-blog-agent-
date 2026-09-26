@@ -15,24 +15,24 @@ function calculateBackoffDelay(retryCount) {
 
 function scheduleContinuation(delayMs) {
   const triggers = ScriptApp.getProjectTriggers();
-  let hasContinuation = false;
+  // Always clean up existing triggers (including disabled/stale ones or the currently executing one)
   for (const trigger of triggers) {
     if (trigger.getHandlerFunction() === 'processPublishingJob') {
-      hasContinuation = true;
-      break;
+      try {
+        ScriptApp.deleteTrigger(trigger);
+      } catch (e) {
+        Logger.log(`[JOB] Failed to delete trigger: ${e.message}`);
+      }
     }
   }
-  if (!hasContinuation) {
-    const defaultDelay = 1 * 60 * 1000;
-    const finalDelay = delayMs || defaultDelay;
-    ScriptApp.newTrigger('processPublishingJob')
-      .timeBased()
-      .after(finalDelay)
-      .create();
-    Logger.log(`[JOB] Scheduled continuation trigger for processPublishingJob after ${finalDelay}ms.`);
-  } else {
-    Logger.log('[JOB] Continuation trigger already exists.');
-  }
+
+  const defaultDelay = 1 * 60 * 1000;
+  const finalDelay = delayMs || defaultDelay;
+  ScriptApp.newTrigger('processPublishingJob')
+    .timeBased()
+    .after(finalDelay)
+    .create();
+  Logger.log(`[JOB] Scheduled fresh continuation trigger for processPublishingJob after ${finalDelay}ms.`);
 }
 
 function updateHeartbeat(job) {
@@ -429,12 +429,6 @@ function watchdogTrigger() {
        const delayMs = calculateBackoffDelay(job.retryCount || 0);
        if (now - lastUpdated >= delayMs) {
           Logger.log(`[WATCHDOG] Job ${jobId} RETRY_WAIT elapsed but no active worker. Ensuring continuation...`);
-          const triggers = ScriptApp.getProjectTriggers();
-          for (const trigger of triggers) {
-            if (trigger.getHandlerFunction() === 'processPublishingJob') {
-              ScriptApp.deleteTrigger(trigger);
-            }
-          }
           scheduleContinuation(1000);
        }
        return;
@@ -442,19 +436,13 @@ function watchdogTrigger() {
 
     if (job.workerActive) {
        const heartbeatTime = new Date(job.workerHeartbeatAt || job.workerStartedAt || job.lastUpdated).getTime();
-       const inactiveMs = now - heartbeatTime; Logger.log('[DEBUG WATCHDOG] heartbeatTime: ' + heartbeatTime + ' inactiveMs: ' + inactiveMs + ' workerActive: ' + job.workerActive);
+       const inactiveMs = now - heartbeatTime;
+       Logger.log('[DEBUG WATCHDOG] heartbeatTime: ' + heartbeatTime + ' inactiveMs: ' + inactiveMs + ' workerActive: ' + job.workerActive);
 
        if (inactiveMs > 8 * 60 * 1000) {
          Logger.log(`[WATCHDOG] Job ${jobId} active but heartbeat stale for > 8 mins. Clearing lease and resuming...`);
          job.workerActive = false;
          saveJobState(job);
-
-         const triggers = ScriptApp.getProjectTriggers();
-         for (const trigger of triggers) {
-           if (trigger.getHandlerFunction() === 'processPublishingJob') {
-             ScriptApp.deleteTrigger(trigger);
-           }
-         }
          scheduleContinuation(1000);
        } else {
          Logger.log(`[WATCHDOG] Job ${jobId} has healthy active worker (heartbeat ${inactiveMs/1000}s ago).`);
@@ -464,12 +452,6 @@ function watchdogTrigger() {
        const inactiveMs = now - heartbeatTime;
        if (inactiveMs > 10 * 60 * 1000) {
          Logger.log(`[WATCHDOG] Job ${jobId} is not DONE but has no active worker. Resuming...`);
-         const triggers = ScriptApp.getProjectTriggers();
-         for (const trigger of triggers) {
-           if (trigger.getHandlerFunction() === 'processPublishingJob') {
-             ScriptApp.deleteTrigger(trigger);
-           }
-         }
          scheduleContinuation(1000);
        }
     }

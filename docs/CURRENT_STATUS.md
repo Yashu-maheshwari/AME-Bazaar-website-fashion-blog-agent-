@@ -1,7 +1,7 @@
 # CURRENT_STATUS.md - Project State
 
-- **Last Updated:** 2026-09-12
-- **Version:** 1.34.0
+- **Last Updated:** 2026-09-25
+- **Version:** 1.35.0
 - **Owner:** AME Bazaar AI OS Core
 - **Purpose:** Tracks the live state, active milestone, task lists, and blocker status for the AME Bazaar Digital Platform.
 - **Dependencies:** docs/MASTER_PLAN.md
@@ -10,7 +10,7 @@
 ---
 
 ## 1. Project Status Summary
-Following the successful controlled real-life production publication test of the NEW AI Website Fashion Blog Agent (`1TlqTjUrrgM7_AsnPKjCerIO52iLKXIZ1n-Sh0XMNpAXb1Y536Vl0YwcB`), the existing daily production publishing schedule has been officially RESUMED. Exactly ONE daily production time-driven trigger (`Trigger ID: 8556789881626427392`, handler `runDailyContentEngine`, source `CLOCK`, frequency: daily at ~11:00 AM IST in `Asia/Kolkata`) has been restored and verified active on the remote GAS project. Deduplication guards were actively verified: running trigger setup idempotently cleans any existing schedule before creating the new trigger, ensuring exactly 1 active trigger and 0 duplicate triggers. The trigger inspection and setup endpoints (`inspectProjectTriggers` and `doGet`) were integrated into `gas_agent/Main.gs` and deployed as Version 3 (`AKfycbxCd5m8pT0S1KeNJfygosBAvr_XsSGdfnmXSFKY08FICW7oA4iL5ONzdcU77sGg6e0`). The legacy Social Media Agent GAS project (`1PERF3o5OMpYfbH8ePPC0HDNQEHEnWFfF7hE1ZPEQ6e84UAeYlSl1S_q7`) was verified via Apps Script API metadata to be completely untouched (`updateTime` remains `2026-09-09T18:44:24.267Z`, 0 calls/edits). All 100 unit tests across Sections 1 through 6 pass with a 100% success rate.
+The AME Bazaar Digital Platform has completed comprehensive Reliability Hardening for the Fashion Blog Agent. We resolved a critical defect where hard Apps Script execution timeouts (6 minutes) or API failures (Gemini, Wikimedia, WordPress, GBP) could permanently halt daily publishing. The newly implemented architecture utilizes exponential backoff, recursive continuations, strict `LockService` concurrency controls, and a persistent 15-minute Watchdog cron. It includes deep idempotency guards for WordPress and Google Business Profile POST endpoints to prevent accidental duplicates during post-timeout reconciliations. With a perfect 17/17 pass rate on the newly introduced matrix resiliency tests (117 total unit tests), the local repository is secured, audited, and ready for production deployment. The Legacy Social Media Agent remains untouched.
 
 ## 2. Environment Details
 - **Active Branch:** `main` (Decoupled Master Repository)
@@ -126,6 +126,14 @@ Following the successful controlled real-life production publication test of the
 - [x] Integrated Wikimedia Commons image discovery pipeline into `gas_agent/ImageEngine.gs` with `IMAGE_SERVICE_URL` and `IMAGE_SERVICE_SECRET` getters in `gas_agent/Config.gs`.
 - [x] Enforced direct CDN preview downloading into GAS memory, defense-in-depth license verification, and legal attribution caption preservation in WordPress media uploads (`gas_agent/Main.gs` and `gas_agent/WordPressPublisher.gs`).
 - [x] Expanded test runner `scripts/test_topic_system.js` with Section 5 (24 test cases, 5.A through 5.X), achieving 100% pass rate across all 89 unit tests.
+
+- [x] Resolved execution timeout vulnerabilities by implementing stateless, durable job payloads with recursive exponential backoff continuations in `JobWorker.gs`.
+- [x] Prevented duplicate executions using Google Apps Script `LockService`, enabling deterministic concurrency control.
+- [x] Implemented a self-healing 15-minute Watchdog (`watchdogTrigger`) that detects stalled jobs, clears broken locks, and revives execution loops.
+- [x] Implemented exact-match idempotency checks for WordPress Media and Posts, and Google Business Profile posts, ensuring that timeouts mid-POST never result in duplicate live content.
+- [x] Converted finite retry caps (e.g., maximum 3 topic attempts) into infinite recovery loops for standard content-generation/quality problems.
+- [x] Automated trigger reconciliation (`repairTriggers()`), guaranteeing exactly one `runDailyContentEngine` and exactly one `watchdogTrigger` are active.
+- [x] Successfully injected 17 end-to-end matrix tests into `scripts/test_topic_system.js` simulating timeout clashes, backoff caps, and exact-match deduplications, maintaining a 100% pass rate.
 
 ### Pending Tasks
 - [ ] Create health check scripts in `scripts/checks/` (Under `ame-bazaar-ai-os`).
