@@ -43,13 +43,6 @@ In Google Apps Script, navigate to **Project Settings** (⚙️) $\rightarrow$ *
 | `GOOGLE_GBP_LOCATION_ID` | GBP Location ID | Optional |
 | `BUSINESS_CONFIG_JSON` | Custom JSON string to override default business facts | Optional |
 
-> **Image Discovery Architecture:**
-> 1. **Primary & Exclusive Source (Wikimedia Commons via Hostinger Proxy):** Queries the standalone endpoint `api/image-service.php` using token authentication (`X-AME-Image-Token`). Searches official Wikimedia Commons API for commercially permitted licenses (`CC0`, `Public Domain`, `CC-BY`, `CC-BY-SA`), rejecting non-commercial, no-derivative, and fair-use assets.
-> 2. **Direct CDN Blob Download:** GAS downloads the 1024px scaled regular preview directly from Wikimedia CDN into memory (no intermediate file storage on Hostinger).
-> 3. **Verification Gates:** Runs deterministic semantic demographic/garment/season gates (with strict mandatory garment matching and non-garment subject exclusion for landmarks/architecture) and multimodal Gemini Vision verification before acceptance.
-> 4. **Attribution Preservation:** Legal credit and license metadata are automatically injected into the WordPress media caption upon upload.
-> 5. **Safe Failure:** If the Hostinger service is unconfigured, encounters network errors, or no candidate passes semantic and license filters, the engine returns a safe failure (`blob: null`, `isFallback: true`) to trigger the quality repair loop without calling any unverified external image APIs.
-
 > **Note on Initial State:** To pre-seed previously published topics or initial queue, you can optionally set `AME_PUBLISHED_TOPICS_MEMORY` with a JSON string matching `{ "published": [...], "queue": [...] }`. If unset, it initializes automatically.
 
 ---
@@ -72,7 +65,7 @@ In Google Apps Script, navigate to **Project Settings** (⚙️) $\rightarrow$ *
 
 5. **Run End-to-End Test Draft:**
    - Select **`testEndToEndDraftGeneration`** and click **Run**.
-   - This generates a complete article, uploads a featured image, attaches schemas & CTA, and creates **ONE draft post** in WordPress (status: `"draft"`).
+   - This generates a complete article, attaches schemas & CTA, and creates **ONE draft post** in WordPress (status: `"draft"`).
    - Check WordPress Admin (`/wp-admin/edit.php`) to confirm the draft post, Yoast SEO fields, and featured media.
 
 6. **Configure Daily Schedule Trigger:**
