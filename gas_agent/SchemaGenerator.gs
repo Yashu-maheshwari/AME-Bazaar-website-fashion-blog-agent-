@@ -59,7 +59,7 @@ function buildArticleSchema(articleData) {
   const datePublished = articleData.datePublished || nowIso;
   const dateModified = articleData.dateModified || articleData.datePublished || nowIso;
 
-  return {
+  const articleSchema = {
     "@context": "https://schema.org",
     "@type": "Article",
     "@id": `${articleUrl}#article`,
@@ -69,11 +69,6 @@ function buildArticleSchema(articleData) {
     },
     "headline": articleData.title,
     "description": articleData.metaDescription || "",
-    "image": {
-      "@type": "ImageObject",
-      "url": articleData.imageUrl || `${baseUrl}/wp-content/uploads/${articleData.imageFilename || (articleData.slug + '.webp')}`,
-      "caption": articleData.imageAltText || articleData.title || ""
-    },
     "datePublished": datePublished,
     "dateModified": dateModified,
     "mainEntityOfPage": {
@@ -87,6 +82,16 @@ function buildArticleSchema(articleData) {
       "@id": "https://amebazaar.in/#organization"
     }
   };
+
+  if (articleData.imageUrl) {
+    articleSchema.image = {
+      "@type": "ImageObject",
+      "url": articleData.imageUrl,
+      "caption": articleData.imageAltText || articleData.title || ""
+    };
+  }
+
+  return articleSchema;
 }
 
 /**

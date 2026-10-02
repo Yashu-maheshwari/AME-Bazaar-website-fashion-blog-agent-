@@ -199,6 +199,14 @@ function doGet(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (action === 'resumeJob') {
+    watchdogTrigger();
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: "Watchdog triggered. Job will resume if stuck."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   return ContentService.createTextOutput(JSON.stringify({
     status: "OK",
     agent: "AME Bazaar AI Website Fashion Blog Agent",
@@ -294,7 +302,7 @@ function runDailyContentEngineLegacySync(options) {
              }
              const queries = (articleData.imageSemanticBrief && articleData.imageSemanticBrief.imageSearchQueries) || articleData.imageSearchQueries || [topic.focusKeyword + ' ' + topic.category];
              Logger.log('[IMAGE] Executing Topic-Specific Image Search...');
-             currentImgData = fetchTopicSpecificImage(queries, topic.category, topic.focusKeyword, articleData.imageSemanticBrief, articleData.imageAltText, articleData.imageDescription, topic.title);
+             currentImgData = null; // TEXT-ONLY MODE
              if (currentImgData) {
                 articleData.imageUrl = currentImgData.url;
                 articleData.isFallbackImage = currentImgData.isFallback;
@@ -336,7 +344,7 @@ function runDailyContentEngineLegacySync(options) {
              }
              const queries = (articleData.imageSemanticBrief && articleData.imageSemanticBrief.imageSearchQueries) || articleData.imageSearchQueries || [topic.focusKeyword + ' ' + topic.category];
              Logger.log('[IMAGE] Executing Topic-Specific Image Search...');
-             currentImgData = fetchTopicSpecificImage(queries, topic.category, topic.focusKeyword, articleData.imageSemanticBrief, articleData.imageAltText, articleData.imageDescription, topic.title);
+             currentImgData = null; // TEXT-ONLY MODE
              if (currentImgData) {
                 articleData.imageUrl = currentImgData.url;
                 articleData.isFallbackImage = currentImgData.isFallback;
@@ -583,7 +591,7 @@ function testRepairLoop() {
           if (!isDryRun && (!currentImgData || currentImgData.isFallback)) {
              const queries = (articleData.imageSemanticBrief && articleData.imageSemanticBrief.imageSearchQueries) || articleData.imageSearchQueries || [mockTopic.focusKeyword + ' ' + mockTopic.category];
              Logger.log('[IMAGE] Executing Topic-Specific Image Search...');
-             currentImgData = fetchTopicSpecificImage(queries, mockTopic.category, mockTopic.focusKeyword, articleData.imageSemanticBrief, articleData.imageAltText, articleData.imageDescription, mockTopic.title);
+             currentImgData = null; // TEXT-ONLY MODE
              if (currentImgData) {
                 articleData.imageUrl = currentImgData.url;
                 articleData.isFallbackImage = currentImgData.isFallback;
@@ -724,7 +732,7 @@ Return ONLY a JSON object with this exact structure:
     Logger.log(`[IMAGE TEST] Queries: ${queries.join(', ')}`);
 
     // Perform search and validation using the new 3-stage pipeline
-    const imgData = fetchTopicSpecificImage(queries, test.category, test.focusKeyword, brief, altText, desc, test.title);
+    const imgData = null; // TEXT-ONLY MODE
 
     const endTime = new Date().getTime();
     const executionTimeSec = ((endTime - startTime) / 1000).toFixed(2);
@@ -827,7 +835,7 @@ function runComprehensivePipelineTests() {
     results.imageRetrieval = queries.length >= 3 ? 'PASS' : 'FAIL';
 
     Logger.log('[TEST] Executing Image Search...');
-    const imgData = fetchTopicSpecificImage(queries, testTopic.category, testTopic.focusKeyword, articleData.imageSemanticBrief, articleData.imageAltText, articleData.imageDescription, testTopic.title);
+    const imgData = null; // TEXT-ONLY MODE
 
     if (imgData) {
       const isFallback = imgData.isFallback;

@@ -154,34 +154,8 @@ function processPublishingJob(e) {
           break;
 
         case JOB_STATES.CONTENT_GENERATED:
-          const aData = job.jobData.articleData;
-          const t = job.jobData.topic;
-          if (!aData.imageSemanticBrief) {
-             aData.imageSemanticBrief = deriveImageSemanticBrief(t, aData);
-          }
-          const queries = (aData.imageSemanticBrief && aData.imageSemanticBrief.imageSearchQueries) || aData.imageSearchQueries || [t.focusKeyword + ' ' + t.category];
-
-          let imgData = job.jobData.imgData;
-          if (!imgData || imgData.isFallback) {
-             imgData = fetchTopicSpecificImage(queries, t.category, t.focusKeyword, aData.imageSemanticBrief, aData.imageAltText, aData.imageDescription, t.title);
-
-             if (imgData && imgData.blob) {
-                delete imgData.blob; // Strip blob out to prevent massive json parsing fail
-             }
-             job.jobData.imgData = imgData;
-          }
-
-          if (imgData) {
-            aData.imageUrl = imgData.url;
-            aData.isFallbackImage = imgData.isFallback;
-            if (imgData.filename) {
-               aData.imageFilename = imgData.filename;
-               aData.imageAltText = imgData.altText;
-               aData.imageDescription = imgData.description;
-               aData.imageTitle = imgData.title;
-            }
-          }
-          job.jobData.articleData = aData;
+          // TEXT-ONLY MODE: Completely bypass image discovery and fetching
+          Logger.log(`[JOB] TEXT-ONLY MODE: Bypassing image discovery.`);
           job.state = JOB_STATES.IMAGE_SELECTED;
           updateHeartbeat(job);
           break;
@@ -215,52 +189,9 @@ function processPublishingJob(e) {
           break;
 
         case JOB_STATES.QUALITY_PASSED:
-          let mediaId = null;
-          const finalEval = job.jobData.finalEvalData;
-          const imgD = job.jobData.imgData;
-
-          if (imgD && imgD.url) {
-             const targetFilename = finalEval.imageFilename || `${finalEval.slug}.webp`;
-
-             Logger.log(`[JOB] Idempotency check for media: ${targetFilename}`);
-             const checkUrl = `${getWordPressUrl()}/wp-json/wp/v2/media?search=${encodeURIComponent(targetFilename)}`;
-             const headers = getWordPressHeaders();
-             const checkRes = UrlFetchApp.fetch(checkUrl, { headers: headers, muteHttpExceptions: true });
-             let mediaExists = false;
-             if (checkRes.getResponseCode() === 200) {
-                 const mediaList = JSON.parse(checkRes.getContentText());
-                 for (const m of mediaList) {
-                     // Verify exact match on title or filename logic
-                     if (m.source_url && m.source_url.indexOf(targetFilename) !== -1 && m.slug === targetFilename.replace(/\.[^/.]+$/, "")) {
-                         mediaId = m.id;
-                         mediaExists = true;
-                         Logger.log(`[JOB] Media EXACT MATCH already exists with ID: ${mediaId}. Reusing.`);
-                         break;
-                     }
-                 }
-             }
-
-             if (!mediaExists) {
-               Logger.log(`[JOB] Fetching blob for upload from: ${imgD.url}`);
-               const fetchRes = UrlFetchApp.fetch(imgD.url, {muteHttpExceptions: true});
-               if (fetchRes.getResponseCode() === 200) {
-                 const blobToUpload = fetchRes.getBlob();
-                 mediaId = uploadMediaToWordPress(
-                   blobToUpload,
-                   targetFilename,
-                   {
-                     title: finalEval.imageTitle || finalEval.title,
-                     altText: finalEval.imageAltText || `Fashion feature for ${finalEval.title}`,
-                     caption: (imgD.attribution && imgD.attribution.creditHtml) ? imgD.attribution.creditHtml : (imgD.caption || ''),
-                     description: finalEval.imageDescription || ''
-                   }
-                 );
-               } else {
-                 throw new Error(`Failed to re-fetch blob. Status: ${fetchRes.getResponseCode()}`);
-               }
-             }
-          }
-          job.jobData.mediaId = mediaId;
+          // TEXT-ONLY MODE: Completely bypass WordPress media upload
+          Logger.log(`[JOB] TEXT-ONLY MODE: Bypassing media upload.`);
+          job.jobData.mediaId = null;
           job.state = JOB_STATES.MEDIA_UPLOADED;
           updateHeartbeat(job);
           break;
@@ -293,7 +224,8 @@ function processPublishingJob(e) {
           if (postId && postLink) {
               wpResult = { id: postId, link: postLink };
           } else {
-              wpResult = publishToWordPress(pFinal, job.jobData.mediaId, null, pTopic);
+              // TEXT-ONLY MODE: Always pass null for mediaId
+              wpResult = publishToWordPress(pFinal, null, null, pTopic);
           }
 
           job.jobData.wpResult = wpResult;

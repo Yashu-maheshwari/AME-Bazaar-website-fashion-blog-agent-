@@ -82,7 +82,7 @@ function getSecret(key, defaultValue = '') {
  * @returns {string}
  */
 function getImageServiceUrl() {
-  return getSecret('IMAGE_SERVICE_URL', '').trim();
+  return '';
 }
 
 /**
@@ -91,7 +91,7 @@ function getImageServiceUrl() {
  * @returns {string}
  */
 function getImageServiceSecret() {
-  return getSecret('IMAGE_SERVICE_SECRET', '').trim();
+  return '';
 }
 
 /**

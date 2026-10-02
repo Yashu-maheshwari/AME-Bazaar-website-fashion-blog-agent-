@@ -10,7 +10,7 @@
 ---
 
 ## 1. Project Status Summary
-The AME Bazaar Digital Platform has completed comprehensive Reliability Hardening for the Fashion Blog Agent. We resolved a critical defect where hard Apps Script execution timeouts (6 minutes) or API failures (Gemini, Wikimedia, WordPress, GBP) could permanently halt daily publishing. The newly implemented architecture utilizes exponential backoff, recursive continuations, strict `LockService` concurrency controls, and a persistent 15-minute Watchdog cron. It includes deep idempotency guards for WordPress and Google Business Profile POST endpoints to prevent accidental duplicates during post-timeout reconciliations. With a perfect 17/17 pass rate on the newly introduced matrix resiliency tests (117 total unit tests), the local repository is secured, audited, and ready for production deployment. The Legacy Social Media Agent remains untouched.
+The AME Bazaar Digital Platform has implemented an emergency TEXT-ONLY publishing override. All image infrastructure (Wikimedia API calls, selection logic, quality checks, WP media uploads) has been completely removed to prevent jobs from becoming permanently blocked by repeated image failures and quotas. Jobs transition seamlessly from content generation directly to WP posting. The Legacy Social Media Agent remains untouched.
 
 ## 2. Environment Details
 - **Active Branch:** `main` (Decoupled Master Repository)
